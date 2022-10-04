@@ -1,5 +1,5 @@
-use hyper::{server as HyperServer, service as HyperService};
-use tokio::net::TcpListener;
+use std::{net::SocketAddr, str::FromStr};
+use warp::Filter;
 
 const ADDR: &str = "127.0.0.1:3000";
 
@@ -7,23 +7,9 @@ const ADDR: &str = "127.0.0.1:3000";
 async fn main() -> anyhow::Result<()> {
     pretty_env_logger::try_init()?;
 
-    let listener = TcpListener::bind(ADDR).await?;
-    log::info!("Listening on https://{}", ADDR);
+    let hello = warp::path!("hello" / String).map(|name| format!("hello, {}", name));
 
-    loop {
-        let (stream, _) = listener.accept().await?;
+    warp::serve(hello).run(SocketAddr::from_str(ADDR)?).await;
 
-        tokio::spawn(async move {
-            if let Err(e) = HyperServer::conn::Http::new()
-                .serve_connection(stream, HyperService::service_fn(hello))
-                .await
-            {
-                log::error!("Hyper serve_connection error={:?}", e);
-            }
-        });
-    }
-}
-
-async fn hello(_: hyper::Request<hyper::Body>) -> anyhow::Result<hyper::Response<hyper::Body>> {
-    Ok(hyper::Response::new("hello, Neos.".into()))
+    Ok(())
 }
