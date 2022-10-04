@@ -1,6 +1,8 @@
 use std::{net::SocketAddr, str::FromStr};
 use warp::Filter;
 
+mod deck;
+
 const ADDR: &str = "127.0.0.1:3030";
 
 #[tokio::main]
@@ -14,11 +16,15 @@ async fn main() -> anyhow::Result<()> {
         .allow_header("content-type")
         .allow_method("GET");
 
-    let hello = warp::path!("hello" / String)
-        .map(|name| format!("hello, {}", name))
-        .with(cors);
+    let deck = warp::path!("deck" / String).map(deck_service).with(cors);
 
-    warp::serve(hello).run(SocketAddr::from_str(ADDR)?).await;
+    warp::serve(deck).run(SocketAddr::from_str(ADDR)?).await;
 
     Ok(())
+}
+
+fn deck_service(param: String) -> String {
+    let deck = deck::Deck::from_path(format!("deck/{}", param)).unwrap_or_default();
+    let json = serde_json::to_string(&deck).unwrap_or_default();
+    json
 }
